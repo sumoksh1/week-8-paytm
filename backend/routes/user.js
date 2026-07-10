@@ -4,7 +4,7 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const { User } = require("../db");
 const { JWT_SECRET } = require("../config");
-
+const  { authMiddleware } = require("../middleware");
 
 
 const userSchema = zod.object({
@@ -15,38 +15,123 @@ const userSchema = zod.object({
 });
 
 router.post("/signup", async (req, res) => {
-    const { username, password, firstName, lastName } = req.body;
+        const { username, password, firstName, lastName } = req.body;
 
-    const{success, error} = userSchema.safeParse(req.body);
-    if (!success) {
-        return res.status(400).json({ message: "Email is already taken / Invalid input", error });
-    }
+        const{success, error} = userSchema.safeParse(req.body);
+        if (!success) {
+            return res.status(400).json({ message: "Email is already taken / Invalid input", error });
+        }
 
 
-    const existingUser = User.findOne({ username });
-    if (existingUser._id) {
-        return res.status(400).json({ message: "Email is already taken / Invalid input", error  });
-    }
+        const existingUser = User.findOne({ username });
+        if (existingUser._id) {
+         return res.status(400).json({ message: "Email is already taken / Invalid input", error  });
+        }
 
-    const user = await User.create({username, password, firstName, lastName});
-    const token = jwt.sign({ id: user._id }, JWT_SECRET);
-    res.json({ message: "User created successfully", token });
+        const user = await User.create({username, password, firstName, lastName});
+        const token = jwt.sign({ id: user._id }, JWT_SECRET);
+        res.json({ message: "User created successfully", token });
+})
+           
 
-    // Create a new user instance
-    // const newUser = new User({
-    //     username,
-    //     password,
-    //     firstName,
-    //     lastName
-    // });
-
-    // try {
-    //     // Save the user to the database
-    //     await newUser.save();
-    //     res.status(201).json({ message: "User created successfully", user: newUser });
-    // } catch (error) {
-    //     res.status(500).json({ message: "Error creating user", error });
-    // }
+const signinBody = zod.object({
+        username: zod.string().email(),
+	    password: zod.string()
 })
 
+router.post("/signin", async (req, res) => {
+    const { success } = signinBody.safeParse(req.body)
+    if (!success) {
+        return res.status(411).json({
+            message: "Email already taken / Incorrect inputs"
+        })
+    }
+
+    const user = await User.findOne({
+        username: req.body.username,
+        password: req.body.password
+    });
+
+    if (user) {
+        const token = jwt.sign({
+            userId: user._id
+        }, JWT_SECRET);
+  
+        res.json({
+            token: token
+        })
+        return;
+    }
+
+    
+    res.status(411).json({
+        message: "Error while logging in"
+    })
+})    
+
+const updateBody = zod.object({
+	    password: zod.string().optional(),
+        firstName: zod.string().optional(),
+        lastName: zod.string().optional(),
+})
+
+router.put("/", authMiddleware, async (req, res) => {
+    const { success } = updateBody.safeParse(req.body)
+    if (!success) {
+        res.status(411).json({
+            message: "Error while updating information"
+        })
+    }
+
+    await User.updateOne(req.body, {
+        _id: req.userId
+    })
+
+    res.json({
+        message: "Updated successfully"
+    })
+})
+
+router.get("/bulk", async (req, res) => {
+    const filter = req.query.filter || "";
+
+    const users = await User.find({
+        $or: [{
+            firstName: {
+                "$regex": filter
+            }
+        }, {
+            lastName: {
+                "$regex": filter
+            }
+        }]
+    })
+
+    res.json({
+        user: users.map(user => ({
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            _id: user._id
+        }))
+    })
+})
+
+
 module.exports = router;
+
+
+         // Create a new user instance
+            // const newUser = new User({
+            //     username,
+            //     password,
+            //     firstName,
+            //     lastName
+            // });
+            // try {
+            //     // Save the user to the database
+            //     await newUser.save();
+            //     res.status(201).json({ message: "User created successfully", user: newUser });
+            // } catch (error) {
+            //     res.status(500).json({ message: "Error creating user", error });
+            //    // }
