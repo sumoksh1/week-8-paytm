@@ -1,5 +1,8 @@
 // backend/db.js
 const mongoose = require('mongoose');
+mongoose.connect('mongodb+srv://admin:Sumoksh123@cluster0.qcesoic.mongodb.net/')
+    .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error(err));
 
 // Create a Schema for Users
 const userSchema = new mongoose.Schema({
