@@ -44,12 +44,18 @@ router.post("/signup", async (req, res) => {
            
 
 const signinBody = zod.object({
-        username: zod.string().email(),
+        username: zod.string(),
 	    password: zod.string()
 })
 
 router.post("/signin", async (req, res) => {
     const { success } = signinBody.safeParse(req.body)
+    // const result = signinBody.safeParse(req.body);
+    // console.log(result);
+    // if (!result.success) {
+    //     return res.status(400).json(result.error);
+    //     }
+
     if (!success) {
         return res.status(411).json({
             message: "Email already taken / Incorrect inputs"
