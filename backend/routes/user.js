@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const { User } = require("../db");
 const { JWT_SECRET } = require("../config");
 const  authMiddleware  = require("../middleware");
-
+const { Account } = require('../db');
 
 const userSchema = zod.object({
     username: zod.string().min(2).max(100),
@@ -30,6 +30,7 @@ router.post("/signup", async (req, res) => {
 
         const user = await User.create({username, password, firstName, lastName});
         /// ----- Create new account ------
+        const userId = user._id;
 
         await Account.create({
             userId,
